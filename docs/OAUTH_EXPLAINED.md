@@ -52,47 +52,29 @@ The defining feature of the Authorization Code flow is that the browser only eve
 
 ## 3. The flow, step by step
 
-```
-┌────────┐                    ┌─────────┐                  ┌────────┐
-│Browser │                    │Flask app│                  │ GitHub │
-└───┬────┘                    └────┬────┘                  └───┬────┘
-    │                              │                           │
-    │  1. GET /                    │                           │
-    ├─────────────────────────────►│                           │
-    │  "Login with GitHub" page    │                           │
-    │◄─────────────────────────────┤                           │
-    │                              │                           │
-    │  2. GET /login               │                           │
-    ├─────────────────────────────►│                           │
-    │                              │  builds authorize URL     │
-    │                              │  with state, scope, etc.  │
-    │  3. 302 to github.com/...    │                           │
-    │◄─────────────────────────────┤                           │
-    │                              │                           │
-    │  4. GET github.com/login/oauth/authorize?...             │
-    ├─────────────────────────────────────────────────────────►│
-    │                              │                           │
-    │  5. GitHub asks user to log in & approve scopes          │
-    │◄─────────────────────────────────────────────────────────┤
-    │                              │                           │
-    │  6. 302 to /auth/callback?code=XYZ&state=ABC             │
-    │◄─────────────────────────────────────────────────────────┤
-    │                              │                           │
-    │  7. GET /auth/callback?code=XYZ&state=ABC                │
-    ├─────────────────────────────►│                           │
-    │                              │  8. POST /login/oauth/access_token
-    │                              │     (code + client_secret)│
-    │                              ├──────────────────────────►│
-    │                              │  9. { access_token: ... } │
-    │                              │◄──────────────────────────┤
-    │                              │                           │
-    │                              │ 10. GET /user (bearer)    │
-    │                              ├──────────────────────────►│
-    │                              │ 11. { id, login, ... }    │
-    │                              │◄──────────────────────────┤
-    │                              │                           │
-    │ 12. 302 to /  (with session cookie set)                  │
-    │◄─────────────────────────────┤                           │
+```mermaid
+sequenceDiagram
+    participant B as Browser
+    participant F as Flask app
+    participant G as GitHub
+
+    B->>F: 1. GET /
+    F-->>B: "Login with GitHub" page
+
+    B->>F: 2. GET /login
+    Note over F: builds authorize URL<br/>with state, scope, etc.
+    F-->>B: 3. 302 to github.com/...
+
+    B->>G: 4. GET github.com/login/oauth/authorize?...
+    G-->>B: 5. GitHub asks user to log in & approve scopes
+    G-->>B: 6. 302 to /auth/callback?code=XYZ&state=ABC
+
+    B->>F: 7. GET /auth/callback?code=XYZ&state=ABC
+    F->>G: 8. POST /login/oauth/access_token<br/>(code + client_secret)
+    G-->>F: 9. { access_token: ... }
+    F->>G: 10. GET /user (bearer)
+    G-->>F: 11. { id, login, ... }
+    F-->>B: 12. 302 to /  (with session cookie set)
 ```
 
 Steps 1–6 are the **front channel** (everything passes through the browser). Steps 8–11 are the **back channel** (server-to-server, the browser never sees the token).
